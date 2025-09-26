@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  :root {
+    --background: #06112A; 
+    --surface:    #374966;   
+    --header:     #E0E0E1;   
+    --footer:     #6482B0;   
+    --muted:      #5F79A0;   
+    --foreground: #E0E0E1;   
+    --border:     #6482B0;  
+    --input:      #E0E0E1;  
+    --input-foreground: #0B1224; 
+  }
+
+  html, body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+                 Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+  }
+
+  * { @apply border-border; }
+}
+
+@layer utilities {
+  .bg-surface { background-color: var(--surface); }
+}
