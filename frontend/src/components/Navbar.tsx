@@ -7,7 +7,7 @@ function Navbar() {
     <>
     <div className="flex justify-between items-center p-4 text-input-foreground bg-header border-b-4 border-b-border">
     <div className="flex items-center space-x-4">
-      <a href="#home">YACS</a>
+      <a href="" className="text-xl font-semibold">YACS</a>
       <ClassSearch />
     </div>
     <div className="flex items-center space-x-4 h-6">
