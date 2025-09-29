@@ -18,13 +18,13 @@
   }
 
   .dark {
-    --background: #0B1224; 
+    --background: #121214; 
     --surface:    #1E2A3A;   
-    --header:     #1a2237;   
-    --footer:     #374966;   
+    --header:     #1e1e21;   
+    --footer:     #6482B0;  
     --muted:      #5F79A0;   
     --foreground: #E0E0E1;   
-    --border:     #374966;  
+    --border:     #6d6d6e;  
     --input:      #374966;  
     --input-foreground: #E0E0E1;
   }

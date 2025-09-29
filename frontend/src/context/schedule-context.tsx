@@ -1,13 +1,12 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
-
-export type Course = { value: string; label: string };
+import { Course } from "../components/ui/WeekScheduler";
 
 type ScheduleCtx = {
   courses: Course[];
   addCourse: (c: Course) => void;
-  removeCourse: (value: string) => void;
+  removeCourse: (id: string) => void;
   clear: () => void;
-  hasCourse: (value: string) => boolean;
+  hasCourse: (id: string) => boolean;
 };
 
 const ScheduleContext = createContext<ScheduleCtx | undefined>(undefined);
@@ -16,14 +15,14 @@ export function ScheduleProvider({ children }: { children: React.ReactNode }) {
   const [courses, setCourses] = useState<Course[]>([]);
 
   const addCourse = (c: Course) =>
-    setCourses((prev) => (prev.some((x) => x.value === c.value) ? prev : [...prev, c]));
+    setCourses((prev) => (prev.some((x) => x.id === c.id) ? prev : [...prev, c]));
 
-  const removeCourse = (value: string) =>
-    setCourses((prev) => prev.filter((x) => x.value !== value));
+  const removeCourse = (id: string) =>
+    setCourses((prev) => prev.filter((x) => x.id !== id)); 
 
   const clear = () => setCourses([]);
 
-  const hasCourse = (value: string) => courses.some((x) => x.value === value);
+  const hasCourse = (id: string) => courses.some((x) => x.id === id);
 
   const value = useMemo(() => ({ courses, addCourse, removeCourse, clear, hasCourse }), [courses]);
 

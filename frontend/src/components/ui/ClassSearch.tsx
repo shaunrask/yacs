@@ -3,16 +3,22 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { Search as SearchIcon, X as XIcon, Check as CheckIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { useSchedule, type Course } from "../../context/schedule-context";
+import { useSchedule } from "../../context/schedule-context";
+import { Course } from "./WeekScheduler";
 
 // placeholder data
 const classesData: Course[] = [
-  { value: "CSCI-1100", label: "CSCI-1100 — Computer Science I" },
-  { value: "MATH-2010", label: "MATH-2010 — Multivariable Calculus" },
-  { value: "PHYS-1200", label: "PHYS-1200 — Physics I" },
-  { value: "ITWS-1100", label: "ITWS-1100 — Intro to ITWS" },
-  { value: "ECSE-2610", label: "ECSE-2610 — Electric Circuits" },
+  { id: "CSCI-1100", title: "Computer Science I", day: 0, start: "09:00", end: "10:00", location: "Room 101" },
+  { id: "CSCI-1300", title: "Data Structures", day: 2, start: "14:00", end: "15:30", location: "Room 202", colorClass: "bg-emerald-500" },
+  { id: "MATH-2010", title: "Multivariable Calculus & Linear Algebra", day: 1, start: "11:00", end: "12:15", location: "Room 303", colorClass: "bg-red-300" },
+  { id: "PHYS-1200", title: "Physics II for Engineers", day: 3, start: "13:00", end: "14:15", location: "Room 404", colorClass: "bg-red-500" },
+  { id: "ITWS-1100", title: "Information Technology & Web Science", day: 4, start: "10:00", end: "11:15", location: "Room 505", colorClass: "bg-yellow-500" },
+  { id: "ECSE-2610", title: "Computer Components & Operations", day: 0, start: "15:00", end: "16:15", location: "Room 606", colorClass: "bg-purple-500" },
+  { id: "HIST-1010", title: "History of the United States to 1877", day: 2, start: "09:30", end: "10:45", location: "Room 707", colorClass: "bg-pink-500" },
+  { id: "CHEM-1100", title: "Chemistry I", day: 1, start: "14:30", end: "15:45", location: "Room 808", colorClass: "bg-teal-500" },
+  { id: "BIO-1200", title: "Biology I: Introduction to Cell & Molecular Biology", day: 3, start: "08:00", end: "09:15", location: "Room 909", colorClass: "bg-orange-500" },
 ];
+
 
 type ClassSearchProps = { dropdownContainerId?: string };
 
@@ -48,7 +54,7 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
   const filtered = classesData.filter((c) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
-    return c.label.toLowerCase().includes(q) || c.value.toLowerCase().includes(q);
+    return c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q);
   });
 
   const isOpen = open || query.length > 0;
@@ -65,10 +71,10 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
       ) : (
         <ul className="max-h-40 overflow-auto divide-y divide-border overscroll-contain">
           {filtered.map((c) => {
-            const already = hasCourse(c.value);
+            const already = hasCourse(c.id);
             return (
               <li
-                key={c.value}
+                key={c.id}
                 className={cn(
                   "flex cursor-pointer items-center gap-2 px-3 h-10",
                   already ? "opacity-60 cursor-not-allowed" : "hover:bg-muted"
@@ -76,7 +82,7 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
                 onMouseDown={(e) => e.preventDefault()} 
                 onClick={() => {
                   if (already) return;
-                  addCourse(c);          // add to global schedule
+                  addCourse(c);        
                   setQuery("");          
                   setOpen(true);        
                   inputRef.current?.focus();
@@ -86,7 +92,7 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
                 aria-disabled={already}
               >
                 <CheckIcon className={cn("h-4 w-4", already ? "opacity-100" : "opacity-0")} />
-                <span className="truncate">{c.label}</span>
+                <span className="truncate">{c.id} - {c.title}</span>
               </li>
             );
           })}

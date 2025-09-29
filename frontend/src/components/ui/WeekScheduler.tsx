@@ -1,12 +1,13 @@
 import React, { useMemo } from "react";
+import { useSchedule } from "../../context/schedule-context";
 
 export type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Mon, 6=Sun
 
-export type CourseEvent = {
+export type Course = {
   id: string;
   title: string;
   day: DayIndex; 
-  start: string;
+  start: string; 
   end: string;   
   location?: string;
   instructor?: string;
@@ -14,12 +15,12 @@ export type CourseEvent = {
 };
 
 export type WeekSchedulerProps = {
-  events: CourseEvent[]; 
+  events: Course[]; 
   startHour?: number; 
   endHour?: number;  
   slotMinutes?: number; 
   showWeekend?: boolean;
-  onEventClick?: (ev: CourseEvent) => void;
+  onEventClick?: (ev: Course) => void;
 };
 
 export const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
@@ -31,6 +32,20 @@ export function parseTimeToMinutes(t: string): number {
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v));
+}
+
+export function formatTime12h(totalMinutes: number): string {
+  const h24 = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  const am = h24 < 12;
+  let h12 = h24 % 12;
+  if (h12 === 0) h12 = 12;
+  if (m === 0) return `${h12}${am ? "AM" : "PM"}`;
+  return `${h12}:${String(m).padStart(2, "0")}${am ? "AM" : "PM"}`;
+}
+
+export function formatClock12h(hhmm: string): string {
+  return formatTime12h(parseTimeToMinutes(hhmm));
 }
 
 export function computeEventPosition(
@@ -60,8 +75,10 @@ export default function WeekScheduler({
   showWeekend = true,
   onEventClick,
 }: WeekSchedulerProps) {
+  const { courses } = useSchedule();
   const daysToRender = showWeekend ? 7 : 5;
   const totalMinutes = (endHour - startHour) * 60;
+  events = courses;
 
   const layout = useMemo(() => {
     return (events || [])
@@ -93,43 +110,37 @@ export default function WeekScheduler({
 
   return (
     <div className="w-full h-[720px] max-h-[80vh] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
-      {/* Header Row */}
       <div className="grid" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
-        <div className="bg-zinc-50 dark:bg-zinc-900 p-3 text-sm font-medium text-zinc-500 border-b border-zinc-200 dark:border-zinc-800">
-          Time
-        </div>
+        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
         {Array.from({ length: daysToRender }).map((_, d) => (
           <div
             key={d}
-            className="bg-zinc-50 dark:bg-zinc-900 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
+            className="bg-zinc-50 dark:bg-zinc-800 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
           >
             {dayNames[d]}
           </div>
         ))}
       </div>
 
-      {/* Body Grid */}
       <div className="grid h-[calc(100%-44px)] mt-3 mb-3" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
-        {/* Time rail */}
         <div className="relative">
           <div className="absolute inset-0">
-            {/* time labels */}
             {timeMarks.map((m, i) => (
-              <div
-                key={i}
-                className="absolute left-0 right-0 flex items-center justify-end pr-2 text-xs text-zinc-500"
-                style={{ top: `${((m.minutes - startHour * 60) / totalMinutes) * 100}%` }}
-              >
-                <span className="translate-y-[-50%] select-none">{m.label}</span>
-              </div>
+              m.minutes % 60 === 0 ? (
+                <div
+                  key={i}
+                  className="absolute left-0 right-0 flex items-center justify-end pr-2 text-xs text-zinc-500"
+                  style={{ top: `${((m.minutes - startHour * 60) / totalMinutes) * 100}%` }}
+                >
+                  <span className="translate-y-[-50%] select-none">{formatTime12h(m.minutes)}</span>
+                </div>
+              ) : null
             ))}
           </div>
         </div>
 
-        {/* Day columns */}
         {Array.from({ length: daysToRender }).map((_, d) => (
           <div key={d} className="relative border-l border-zinc-100 dark:border-zinc-800">
-            {/* Horizontal slot lines */}
             <div className="absolute inset-0">
               {timeMarks.map((m, i) => (
                 <div
@@ -143,24 +154,30 @@ export default function WeekScheduler({
             <div className="absolute inset-0 p-1">
               {layout
                 .filter((e) => e.day === d)
-                .map((e) => (
-                  <button
-                    key={e.id}
-                    onClick={() => onEventClick?.(e)}
-                    className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass ?? "bg-blue-500"} text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition`}
-                    style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
-                    aria-label={`${e.title} from ${e.start} to ${e.end}${e.location ? ` at ${e.location}` : ""}`}
-                    title={`${e.title} • ${e.start}–${e.end}${e.location ? ` @ ${e.location}` : ""}`}
-                  >
-                    <div className="h-full w-full p-2 flex flex-col items-start justify-between">
-                      <div className="text-xs font-medium opacity-90">{e.start}–{e.end}</div>
-                      <div className="text-sm font-semibold leading-tight">{e.title}</div>
-                      {e.location && (
-                        <div className="text-[10px] opacity-90">{e.location}</div>
-                      )}
-                    </div>
-                  </button>
-                ))}
+                .map((e) => {
+                  const start12 = formatClock12h(e.start);
+                  const end12 = formatClock12h(e.end);
+                  const label = `${e.title} from ${start12} to ${end12}${e.location ? ` at ${e.location}` : ""}`;
+                  const titleLabel = `${e.title} • ${start12}–${end12}${e.location ? ` @ ${e.location}` : ""}`;
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={() => onEventClick?.(e)}
+                      className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass ?? "bg-blue-500"} text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition`}
+                      style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
+                      aria-label={label}
+                      title={titleLabel}
+                    >
+                      <div className="h-full w-full p-2 flex flex-col items-start justify-between">
+                        <div className="text-[10px] font-medium opacity-90">{start12}–{end12}</div>
+                        <div className="text-[12px] font-semibold leading-tight">{e.title}</div>
+                        {e.location && (
+                          <div className="text-[10px] opacity-90">{e.location}</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
             </div>
           </div>
         ))}

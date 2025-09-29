@@ -22,11 +22,11 @@ export default function ScheduleList() {
       ) : (
         <ul className="divide-y divide-border rounded-md border border-border bg-surface">
           {courses.map((c) => (
-            <li key={c.value} className="flex items-center justify-between px-3 py-2">
-              <span>{c.label}</span>
+            <li key={c.id} className="flex items-center justify-between px-3 py-2">
+              <span>{c.id} - {c.title}</span>
               <button
                 className="text-sm underline underline-offset-2 hover:opacity-80"
-                onClick={() => removeCourse(c.value)}
+                onClick={() => removeCourse(c.id)}
               >
                 Remove
               </button>
