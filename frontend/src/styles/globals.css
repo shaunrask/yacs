@@ -6,15 +6,27 @@
 
 @layer base {
   :root {
-    --background: #06112A; 
-    --surface:    #374966;   
-    --header:     #E0E0E1;   
+    --background: #e5e5e5; 
+    --surface:    #d5dce6;   
+    --header:     #ebebeb;   
     --footer:     #6482B0;   
+    --muted:      #e5e5e5;   
+    --foreground: #000000;   
+    --border:     #c6c6c6;  
+    --input:      #E0E0E1;  
+    --input-foreground: #000000; 
+  }
+
+  .dark {
+    --background: #0B1224; 
+    --surface:    #1E2A3A;   
+    --header:     #E0E0E1;   
+    --footer:     #374966;   
     --muted:      #5F79A0;   
     --foreground: #E0E0E1;   
-    --border:     #6482B0;  
-    --input:      #E0E0E1;  
-    --input-foreground: #0B1224; 
+    --border:     #374966;  
+    --input:      #374966;  
+    --input-foreground: #E0E0E1;
   }
 
   html, body {

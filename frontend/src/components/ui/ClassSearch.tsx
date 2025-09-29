@@ -56,7 +56,7 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
   const dropdown = isOpen ? (
     <div
       ref={dropdownRef}
-      className={cn("w-full overflow-hidden border-b-4 border-b-border bg-header text-input-foreground")}
+      className={cn("w-full overflow-hidden bg-header text-input-foreground")}
       role="listbox"
       aria-label="Search results"
     >
