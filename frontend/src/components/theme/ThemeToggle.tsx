@@ -1,26 +1,27 @@
 import { SunIcon, MoonIcon } from '@heroicons/react/24/solid';
 import { Button } from '../ui/button';
-import { JSX, useState } from 'react';
+import { JSX } from 'react';
+import { useTheme } from './ThemeProvider';
 
+export const ThemeToggle = ({
+  className,
+}: { className?: string }): JSX.Element => {
+  const { name, toggleTheme } = useTheme();
+  const isDark = name === 'dark';
 
-export const ThemeToggle = ({ onThemeChange }: { onThemeChange?: (theme: 'light' | 'dark') => void }): JSX.Element => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    if (onThemeChange) onThemeChange(newTheme);
-  };
   return (
     <Button
       variant="ghost"
       size="icon"
-      className="h-8 w-8"
+      className={`h-8 w-8 ${className ?? ''}`}
       onClick={toggleTheme}
+      aria-pressed={isDark}
+      title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
-      {theme === 'light' ? (
-        <SunIcon className="h-4 w-4" />
-      ) : (
+      {isDark ? (
         <MoonIcon className="h-4 w-4" />
+      ) : (
+        <SunIcon className="h-4 w-4" />
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>
