@@ -14,7 +14,7 @@ const classesData: Course[] = [
   { id: "PHYS-1200", title: "Physics II for Engineers", day: 3, start: "13:00", end: "14:15", location: "Room 404", colorClass: "bg-red-500" },
   { id: "ITWS-1100", title: "Information Technology & Web Science", day: 4, start: "10:00", end: "11:15", location: "Room 505", colorClass: "bg-yellow-500" },
   { id: "ECSE-2610", title: "Computer Components & Operations", day: 0, start: "15:00", end: "16:15", location: "Room 606", colorClass: "bg-purple-500" },
-  { id: "HIST-1010", title: "History of the United States to 1877", day: 2, start: "09:30", end: "10:45", location: "Room 707", colorClass: "bg-pink-500" },
+  { id: "HIST-1010", title: "History of the United States to 1877", day: 1, start: "14:00", end: "15:15", location: "Room 707", colorClass: "bg-pink-500" },
   { id: "CHEM-1100", title: "Chemistry I", day: 1, start: "14:30", end: "15:45", location: "Room 808", colorClass: "bg-teal-500" },
   { id: "BIO-1200", title: "Biology I: Introduction to Cell & Molecular Biology", day: 3, start: "08:00", end: "09:15", location: "Room 909", colorClass: "bg-orange-500" },
 ];
@@ -106,7 +106,7 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
       <div
         ref={wrapperRef}
         className={cn(
-          "flex w-full items-center gap-2 rounded-md border bg-white",
+          "flex w-full items-center gap-2 rounded-md border bg-white dark:bg-black",
           "border-border px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-ring"
         )}
         onClick={() => {

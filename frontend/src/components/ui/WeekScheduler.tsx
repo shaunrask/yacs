@@ -67,6 +67,74 @@ export function computeEventPosition(
   return { topPct, heightPct, duration };
 }
 
+function clampToGrid(mins: number, startHour: number, endHour: number) {
+  return clamp(mins, startHour * 60, endHour * 60);
+}
+
+function computeConflictsForDay(
+  dayEvents: Course[],
+  startHour: number,
+  endHour: number
+): Array<{ startMin: number; endMin: number }> {
+  const gridStart = startHour * 60;
+  const gridEnd = endHour * 60;
+
+  const points: Array<{ t: number; d: number }> = [];
+  for (const ev of dayEvents) {
+    const s = clampToGrid(parseTimeToMinutes(ev.start), startHour, endHour);
+    const e = clampToGrid(parseTimeToMinutes(ev.end), startHour, endHour);
+    if (e <= s) continue; 
+    points.push({ t: s, d: +1 });
+    points.push({ t: e, d: -1 });
+  }
+  if (points.length === 0) return [];
+
+  points.sort((a, b) => (a.t === b.t ? a.d - b.d : a.t - b.t));
+
+  const segments: Array<{ startMin: number; endMin: number }> = [];
+  let count = 0;
+  let segStart: number | null = null;
+
+  for (const p of points) {
+    const prev = count;
+    count += p.d;
+
+    if (prev < 2 && count >= 2) {
+      segStart = clamp(p.t, gridStart, gridEnd);
+    }
+    if (prev >= 2 && count < 2 && segStart !== null) {
+      const segEnd = clamp(p.t, gridStart, gridEnd);
+      if (segEnd > segStart) segments.push({ startMin: segStart, endMin: segEnd });
+      segStart = null;
+    }
+  }
+  if (segStart !== null) {
+    segments.push({ startMin: segStart, endMin: gridEnd });
+  }
+  return segments;
+}
+
+function minsToPctRange(
+  startMin: number,
+  endMin: number,
+  startHour: number,
+  endHour: number
+) {
+  const totalMinutes = (endHour - startHour) * 60;
+  const gridStart = startHour * 60;
+  const clampedStart = clamp(startMin, gridStart, gridStart + totalMinutes);
+  const clampedEnd = clamp(endMin, gridStart, gridStart + totalMinutes);
+  const topPct = ((clampedStart - gridStart) / totalMinutes) * 100;
+  const heightPct = Math.max(0, ((clampedEnd - clampedStart) / totalMinutes) * 100);
+  return { topPct, heightPct };
+}
+
+function intersectRange(aStart: number, aEnd: number, bStart: number, bEnd: number) {
+  const s = Math.max(aStart, bStart);
+  const e = Math.min(aEnd, bEnd);
+  return e > s ? { start: s, end: e } : null;
+}
+
 export default function WeekScheduler({
   events = [], 
   startHour = 8,
@@ -94,6 +162,18 @@ export default function WeekScheduler({
       .filter((e) => e.heightPct > 0);
   }, [events, startHour, endHour]);
 
+  const conflicts = useMemo(() => {
+    const byDay: Record<number, Array<{ topPct: number; heightPct: number }>> = {};
+    for (let d = 0; d < daysToRender; d++) {
+      const dayEvents = (events || []).filter((e) => e.day === d);
+      const segs = computeConflictsForDay(dayEvents, startHour, endHour);
+      byDay[d] = segs
+        .map(({ startMin, endMin }) => minsToPctRange(startMin, endMin, startHour, endHour));
+    }
+    return byDay;
+  }, [events, startHour, endHour, daysToRender]);
+
+
   const timeMarks = useMemo(() => {
     const marks: { label: string; minutes: number }[] = [];
     const step = slotMinutes;
@@ -109,13 +189,13 @@ export default function WeekScheduler({
   }, [startHour, endHour, slotMinutes]);
 
   return (
-    <div className="w-full h-[720px] max-h-[80vh] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+    <div className="w-full h-[720px] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
       <div className="grid" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
-        <div className="bg-zinc-50 dark:bg-zinc-800 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
+        <div className="bg-zinc-100 dark:bg-zinc-800 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
         {Array.from({ length: daysToRender }).map((_, d) => (
           <div
             key={d}
-            className="bg-zinc-50 dark:bg-zinc-800 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
+            className="bg-zinc-100 dark:bg-zinc-800 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
           >
             {dayNames[d]}
           </div>
@@ -153,31 +233,70 @@ export default function WeekScheduler({
 
             <div className="absolute inset-0 p-1">
               {layout
-                .filter((e) => e.day === d)
-                .map((e) => {
-                  const start12 = formatClock12h(e.start);
-                  const end12 = formatClock12h(e.end);
-                  const label = `${e.title} from ${start12} to ${end12}${e.location ? ` at ${e.location}` : ""}`;
-                  const titleLabel = `${e.title} • ${start12}–${end12}${e.location ? ` @ ${e.location}` : ""}`;
-                  return (
-                    <button
-                      key={e.id}
-                      onClick={() => onEventClick?.(e)}
-                      className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass ?? "bg-blue-500"} text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition`}
-                      style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
-                      aria-label={label}
-                      title={titleLabel}
-                    >
-                      <div className="h-full w-full p-2 flex flex-col items-start justify-between">
-                        <div className="text-[10px] font-medium opacity-90">{start12}–{end12}</div>
-                        <div className="text-[12px] font-semibold leading-tight">{e.title}</div>
-                        {e.location && (
-                          <div className="text-[10px] opacity-90">{e.location}</div>
-                        )}
+              .filter((e) => e.day === d)
+              .map((e) => {
+                const start12 = formatClock12h(e.start);
+                const end12 = formatClock12h(e.end);
+                const label = `${e.title} from ${start12} to ${end12}${e.location ? ` at ${e.location}` : ""}`;
+                const titleLabel = `${e.title} • ${start12}–${end12}${e.location ? ` @ ${e.location}` : ""}`;
+
+                const evStartMin = parseTimeToMinutes(e.start);
+                const evEndMin   = parseTimeToMinutes(e.end);
+                const evDurMin   = Math.max(0, evEndMin - evStartMin);
+
+                const slices =
+                (conflicts[d] || [])
+                  .map((c) => {
+                    const gridStart = startHour * 60;
+                    const totalMinutes = (endHour - startHour) * 60;
+                    const cStartMin = gridStart + (c.topPct / 100) * totalMinutes;
+                    const cEndMin   = cStartMin + (c.heightPct / 100) * totalMinutes;
+                    return intersectRange(evStartMin, evEndMin, cStartMin, cEndMin);
+                  })
+                  .filter(Boolean)
+                  .map((rng) => {
+                    const s = (rng!.start - evStartMin) / evDurMin; 
+                    const h = (rng!.end   - evStartMin) / evDurMin - s;
+                    return {
+                      topPct: Math.max(0, s * 100),
+                      heightPct: Math.max(0, h * 100),
+                    };
+                  });
+
+              return (
+                <button
+                  key={e.id}
+                  onClick={() => onEventClick?.(e)}
+                  className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass ?? "bg-blue-500"} text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition`}
+                  style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
+                  aria-label={label}
+                  title={titleLabel}
+                >
+                  <div className="h-full w-full p-2 flex flex-col items-start justify-between overflow-hidden relative">
+                    <div className="absolute inset-0 pointer-events-none">
+                      {slices.map((s, i) => (
+                        <div
+                          key={`ev-conf-${e.id}-${i}`}
+                          className="absolute left-0 right-0 rounded-md border border-red-500/60 bg-red-500/25 [background-image:repeating-linear-gradient(45deg,transparent,transparent_6px,rgba(239,68,68,0.25)_6px,rgba(239,68,68,0.25)_12px)]"
+                          style={{ top: `${s.topPct}%`, height: `${s.heightPct}%` }}
+                          aria-hidden="true"
+                        />
+                      ))}
+                    </div>
+
+                    <div className="text-[10px] font-medium opacity-90">{start12}–{end12}</div>
+                    <div className="w-full text-center text-[12px] font-semibold leading-tight">{e.title}</div>
+                    {e.location && <div className="text-[10px] opacity-90">{e.location}</div>}
+
+                    {slices.length > 0 && (
+                      <div className="absolute top-1 right-1 text-[10px] font-semibold text-red-800 bg-white/80 rounded px-1.5 py-0.5">
+                        Conflict
                       </div>
-                    </button>
-                  );
-                })}
+                    )}
+                  </div>
+                </button>
+              );
+            })}
             </div>
           </div>
         ))}
