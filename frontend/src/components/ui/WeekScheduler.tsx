@@ -191,11 +191,11 @@ export default function WeekScheduler({
   return (
     <div className="w-full h-[720px] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
       <div className="grid" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
-        <div className="bg-zinc-100 dark:bg-zinc-800 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
+        <div className="bg-zinc-100 dark:bg-zinc-700 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
         {Array.from({ length: daysToRender }).map((_, d) => (
           <div
             key={d}
-            className="bg-zinc-100 dark:bg-zinc-800 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
+            className="bg-zinc-100 dark:bg-zinc-700 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
           >
             {dayNames[d]}
           </div>
@@ -274,25 +274,43 @@ export default function WeekScheduler({
                 >
                   <div className="h-full w-full p-2 flex flex-col items-start justify-between overflow-hidden relative">
                     <div className="absolute inset-0 pointer-events-none">
-                      {slices.map((s, i) => (
+                    {slices.map((s, i) => (
+                      <div
+                        key={`ev-conf-${e.id}-${i}`}
+                        className="
+                          absolute left-0 right-0 rounded-md
+                          border border-red-500/60 dark:border-red-400/60
+                          bg-red-500/20 dark:bg-red-400/25
+                          backdrop-blur-[1px]
+                          [background-image:repeating-linear-gradient(45deg,transparent,transparent_6px,rgba(239,68,68,0.22)_6px,rgba(239,68,68,0.22)_12px)]
+                          shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]
+                        "
+                        style={{ top: `${s.topPct}%`, height: `${s.heightPct}%` }}
+                        aria-label="Schedule conflict"
+                      >
                         <div
-                          key={`ev-conf-${e.id}-${i}`}
-                          className="absolute left-0 right-0 rounded-md border border-red-500/60 bg-red-500/25 [background-image:repeating-linear-gradient(45deg,transparent,transparent_6px,rgba(239,68,68,0.25)_6px,rgba(239,68,68,0.25)_12px)]"
-                          style={{ top: `${s.topPct}%`, height: `${s.heightPct}%` }}
+                          className="
+                            absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
+                            flex items-center gap-1
+                            text-[12px] font-semibold
+                            text-red-900
+                            bg-white/90
+                            px-2 py-0.5 rounded-full
+                            ring-1 ring-inset ring-red-500/40 dark:ring-red-400/40
+                            shadow-sm
+                          "
                           aria-hidden="true"
-                        />
-                      ))}
-                    </div>
+                        >
+                          <span aria-hidden>⚠️</span>
+                          <span>Conflict</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
                     <div className="text-[10px] font-medium opacity-90">{start12}–{end12}</div>
                     <div className="w-full text-center text-[12px] font-semibold leading-tight">{e.title}</div>
                     {e.location && <div className="text-[10px] opacity-90">{e.location}</div>}
-
-                    {slices.length > 0 && (
-                      <div className="absolute top-1 right-1 text-[10px] font-semibold text-red-800 bg-white/80 rounded px-1.5 py-0.5">
-                        Conflict
-                      </div>
-                    )}
                   </div>
                 </button>
               );

@@ -2,16 +2,23 @@ import './styles/globals.css';
 import reportWebVitals from './reportWebVitals';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppThemeProvider } from './components/theme/ThemeProvider';
 import App from './app/App';
+import HomePage from "./routes/HomePage";
+import FourYearPlannerPage from "./routes/FourYearPlannerPage";
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <React.StrictMode>
     <AppThemeProvider>
     <BrowserRouter>
-      <App />
+      <Routes>
+      <Route path="/" element={<App />}>
+        <Route index element={<HomePage />} />
+        <Route path="planner" element={<FourYearPlannerPage />} />
+      </Route>
+    </Routes>
     </BrowserRouter>
     </AppThemeProvider>
   </React.StrictMode>

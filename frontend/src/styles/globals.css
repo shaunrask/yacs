@@ -18,9 +18,9 @@
   }
 
   .dark {
-    --background: #121214; 
-    --surface:    #1E2A3A;   
-    --header:     #1e1e21;   
+    --background: #191919; 
+    --surface:    #1d2630;   
+    --header:     #212121;   
     --footer:     #6482B0;  
     --muted:      #2b2e32;   
     --foreground: #E0E0E1;   

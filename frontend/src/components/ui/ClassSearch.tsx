@@ -1,4 +1,3 @@
-// src/components/ClassSearch.tsx
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { Search as SearchIcon, X as XIcon, Check as CheckIcon } from "lucide-react";
