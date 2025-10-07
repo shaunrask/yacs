@@ -66,7 +66,6 @@ const HeaderBar: React.FC<{ total: number; max?: number; onSave: () => void; onA
 = ({ total, max = 128, onSave, onAdd }) => (
   <div className="sticky top-0 z-20 bg-header p-2">
     <div className="h-2 w-full rounded bg-muted overflow-hidden">
-      {/* use footer as accent */}
       <div className="h-full bg-footer" style={{ width: `${Math.min((total / max) * 100, 100)}%` }} />
     </div>
     <div className="mt-2 flex items-center justify-between">
@@ -108,7 +107,7 @@ const TermColumn: React.FC<{
 
       {/* Drop area */}
       <div
-        className="mt-3 rounded-lg border border-dashed border-border p-2"
+        className="mt-3 rounded-lg border border-dashed border-border h-40 overflow-y-auto flex flex-col items-center justify-center gap-2"
         style={{ backgroundColor: "color-mix(in oklab, var(--surface), var(--background) 35%)" }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
@@ -126,17 +125,15 @@ const TermColumn: React.FC<{
             Drop some classes here!
           </div>
         )}
-        <ul className="space-y-2">
+        <ul className="space-y-2 w-full p-2">
           {items.map((c) => (
-            <li key={c.key} className="flex items-center justify-between rounded-md bg-background px-2 py-1 border border-border">
-              <div className="text-sm text-foreground truncate" title={`${c.id} : ${c.title}`}>
+            <li key={c.key} className="flex items-center justify-between rounded-md bg-background dark:bg-slate-600 px-2 py-2 border border-border">
+              <div className="text-md text-foreground truncate" title={`${c.id} : ${c.title}`}>
                 <b>{c.id}</b> : {c.title}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-foreground/80">{c.credits}cr</span>
                 <button
-                  className="text-xs"
-                  style={{ color: "var(--foreground)", opacity: 0.7 }}
+                  className="text-xs items-center justify-center rounded w-6 h-6 text-foreground"
                   onClick={() => onRemove(id, c.key)}
                 >
                   ✕
@@ -152,13 +149,13 @@ const TermColumn: React.FC<{
 
 const CatalogCard: React.FC<{ c: Course }>= ({ c }) => (
   <div
-    className="rounded-md border border-border bg-background px-3 py-2 text-foreground cursor-grab select-none"
+    className="rounded-md border border-border bg-background dark:bg-slate-600 px-3 py-2 text-foreground cursor-grab select-none"
     draggable
     onDragStart={(e) => e.dataTransfer.setData("text/plain", JSON.stringify(c))}
     title={`${c.id} • ${c.title}`}
   >
     <div className="text-sm font-medium truncate">{c.id} : {c.title}</div>
-    <div className="text-xs" style={{ color: "var(--foreground)", opacity: 0.7 }}>{c.credits} credits</div>
+    <div className="text-xs text-gray-500 dark:text-gray-300">{c.credits} credits</div>
   </div>
 );
 

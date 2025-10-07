@@ -7,11 +7,13 @@ import { AppThemeProvider } from './components/theme/ThemeProvider';
 import App from './app/App';
 import HomePage from "./routes/HomePage";
 import FourYearPlannerPage from "./routes/FourYearPlannerPage";
+import { ScheduleProvider } from "./context/schedule-context";
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <React.StrictMode>
     <AppThemeProvider>
+    <ScheduleProvider>
     <BrowserRouter>
       <Routes>
       <Route path="/" element={<App />}>
@@ -20,6 +22,7 @@ root.render(
       </Route>
     </Routes>
     </BrowserRouter>
+    </ScheduleProvider>
     </AppThemeProvider>
   </React.StrictMode>
 );

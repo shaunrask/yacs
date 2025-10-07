@@ -14,8 +14,9 @@ const ScheduleContext = createContext<ScheduleCtx | undefined>(undefined);
 export function ScheduleProvider({ children }: { children: React.ReactNode }) {
   const [courses, setCourses] = useState<Course[]>([]);
 
-  const addCourse = (c: Course) =>
+  const addCourse = (c: Course) => {
     setCourses((prev) => (prev.some((x) => x.id === c.id) ? prev : [...prev, c]));
+  }
 
   const removeCourse = (id: string) =>
     setCourses((prev) => prev.filter((x) => x.id !== id)); 

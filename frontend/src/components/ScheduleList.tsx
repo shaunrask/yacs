@@ -2,6 +2,7 @@ import { useSchedule } from "../context/schedule-context";
 
 export default function ScheduleList() {
   const { courses, removeCourse, clear } = useSchedule();
+  console.log("ScheduleList render", courses);
 
   return (
     <section className="mx-auto max-w-5xl">
