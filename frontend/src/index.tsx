@@ -5,8 +5,8 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppThemeProvider } from './components/theme/ThemeProvider';
 import App from './app/App';
-import HomePage from "./routes/HomePage";
-import FourYearPlannerPage from "./routes/FourYearPlannerPage";
+import HomePage from "./pages/HomePage";
+import FourYearPlannerPage from "./pages/FourYearPlannerPage";
 import { ScheduleProvider } from "./context/schedule-context";
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);

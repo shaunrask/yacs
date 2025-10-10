@@ -3,26 +3,19 @@ import { createPortal } from "react-dom";
 import { Search as SearchIcon, X as XIcon, Check as CheckIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useSchedule } from "../../context/schedule-context";
-import { Course } from "./WeekScheduler";
+import type { Course, Meeting } from "../../types/schedule";
 
-// placeholder data
-const classesData: Course[] = [
-  { id: "CSCI-1100", title: "Computer Science I", day: 0, start: "09:00", end: "10:00", location: "Room 101" },
-  { id: "CSCI-1300", title: "Data Structures", day: 2, start: "14:00", end: "15:30", location: "Room 202", colorClass: "bg-emerald-500" },
-  { id: "MATH-2010", title: "Multivariable Calculus & Linear Algebra", day: 1, start: "11:00", end: "12:15", location: "Room 303", colorClass: "bg-red-300" },
-  { id: "PHYS-1200", title: "Physics II for Engineers", day: 3, start: "13:00", end: "14:15", location: "Room 404", colorClass: "bg-red-500" },
-  { id: "ITWS-1100", title: "Information Technology & Web Science", day: 4, start: "10:00", end: "11:15", location: "Room 505", colorClass: "bg-yellow-500" },
-  { id: "ECSE-2610", title: "Computer Components & Operations", day: 0, start: "15:00", end: "16:15", location: "Room 606", colorClass: "bg-purple-500" },
-  { id: "HIST-1010", title: "History of the United States to 1877", day: 1, start: "14:00", end: "15:15", location: "Room 707", colorClass: "bg-pink-500" },
-  { id: "CHEM-1100", title: "Chemistry I", day: 1, start: "14:30", end: "15:45", location: "Room 808", colorClass: "bg-teal-500" },
-  { id: "BIO-1200", title: "Biology I: Introduction to Cell & Molecular Biology", day: 3, start: "08:00", end: "09:15", location: "Room 909", colorClass: "bg-orange-500" },
-];
+function pickDefaultMeetings(c: Course): Meeting[] {
+  // Pick the first meeting for each meeting.type in the order they appear.
+  const chosen = new Map<string, Meeting>();
+  for (const m of c.meetings) {
+    if (!chosen.has(m.type)) chosen.set(m.type, m);
+  }
+  return Array.from(chosen.values());
+}
 
-
-type ClassSearchProps = { dropdownContainerId?: string };
-
-export function ClassSearch({ dropdownContainerId = "class-search-results-slot" }: ClassSearchProps) {
-  const { addCourse, hasCourse } = useSchedule();
+export function ClassSearch({ dropdownContainerId = "class-search-results-slot" }: { dropdownContainerId?: string }) {
+  const { catalog, addCourse, hasCourse } = useSchedule(); // <- read from context
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -42,19 +35,21 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
       if (
         (wrapperRef.current && wrapperRef.current.contains(t)) ||
         (dropdownRef.current && dropdownRef.current.contains(t))
-      )
-        return;
+      ) return;
       setOpen(false);
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  const filtered = classesData.filter((c) => {
+  const filtered = React.useMemo(() => {
+    const items = Array.isArray(catalog) ? catalog : [];
     const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q);
-  });
+    if (!q) return items;
+    return items.filter((c) =>
+      c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
+    );
+  }, [catalog, query]);
 
   const isOpen = open || query.length > 0;
 
@@ -78,12 +73,15 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
                   "flex cursor-pointer items-center gap-2 px-3 h-10",
                   already ? "opacity-60 cursor-not-allowed" : "hover:bg-muted"
                 )}
-                onMouseDown={(e) => e.preventDefault()} 
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
                   if (already) return;
-                  addCourse(c);        
-                  setQuery("");          
-                  setOpen(true);        
+                  // add course with ONLY the first section per meeting type
+                  const selectedMeetings = pickDefaultMeetings(c);
+                  const selectedCourse: Course = { ...c, meetings: selectedMeetings };
+                  addCourse(selectedCourse);
+                  setQuery("");
+                  setOpen(true);
                   inputRef.current?.focus();
                 }}
                 role="option"

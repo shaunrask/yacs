@@ -13,7 +13,7 @@ function Navbar() {
     <div className="flex justify-between items-center p-4 text-input-foreground bg-header border-b border-b-border">
     <div className="flex items-center space-x-4">
       <a href="/" className="text-l font-bold">YACS</a>
-      <ClassSearch />
+      <ClassSearch/>
     </div>
     <div className="flex items-center space-x-3 h-6 invisible sm:visible">
       <NavLink to="/planner" className={link}>4-Year Plan</NavLink>
