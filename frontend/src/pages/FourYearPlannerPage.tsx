@@ -5,7 +5,6 @@ type Course = { id: string; title: string; credits: number; };
 type PlacedCourse = Course & { key: string };
 type TermId = `${"FALL"|"SPRING"|"SUMMER"} ${number}`;
 
-// ---------------------- Sample Data ----------------------
 const catalog: Course[] = [
   { id: "CSCI-1100", title: "Computer Science 1", credits: 4 },
   { id: "CSCI-1200", title: "Data Structures", credits: 4 },
