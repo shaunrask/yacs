@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "lib": [
       "dom",
       "dom.iterable",
@@ -14,13 +19,11 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src/**/*.ts", "*.ts", "tailwind.config.js", "postcss.config.js"]
 }

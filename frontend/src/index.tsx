@@ -1,15 +1,29 @@
+import './styles/globals.css';
+import reportWebVitals from './reportWebVitals';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AppThemeProvider } from './components/theme/ThemeProvider';
+import App from './app/App';
+import HomePage from "./routes/HomePage";
+import FourYearPlannerPage from "./routes/FourYearPlannerPage";
+import { ScheduleProvider } from "./context/schedule-context";
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <AppThemeProvider>
+    <ScheduleProvider>
+    <BrowserRouter>
+      <Routes>
+      <Route path="/" element={<App />}>
+        <Route index element={<HomePage />} />
+        <Route path="planner" element={<FourYearPlannerPage />} />
+      </Route>
+    </Routes>
+    </BrowserRouter>
+    </ScheduleProvider>
+    </AppThemeProvider>
   </React.StrictMode>
 );
 
