@@ -25,7 +25,7 @@ function SectionRow({
           "w-full text-left justify-start",   
           "min-w-0",                          
           "h-30",                            
-          checked ? "bg-background hover:bg-muted/50" : "hover:bg-muted",
+          checked ? "bg-background hover:bg-muted/20" : "hover:bg-muted",
         ].join(" ")}
       >
         <div className="flex items-start gap-2 w-full min-w-0">
@@ -33,7 +33,7 @@ function SectionRow({
             <div className="font-medium truncate">
               {meeting.type} {meeting.section}
             </div>
-            <div className="text-xs opacity-80 whitespace-normal break-words leading-snug">
+            <div className="text-xs opacity-60 whitespace-normal break-words leading-snug">
               {formatDays(meeting.days)} · {meeting.start}–{meeting.end}
               {meeting.location ? ` · ${meeting.location}` : ""}
               {meeting.instructor ? ` · ${meeting.instructor}` : ""}
@@ -48,10 +48,8 @@ function SectionRow({
 export default function ScheduleList() {
   const { courses, removeCourse, clear, catalog, addCourse } = useSchedule();
 
-  // --- Keep a stable display order by course.id ---
   const orderRef = React.useRef<Map<string, number>>(new Map());
   React.useEffect(() => {
-    // Assign an index to any course.id that doesn't have one yet
     const map = orderRef.current;
     let maxIndex = Math.max(-1, ...Array.from(map.values()));
     for (let i = 0; i < courses.length; i++) {
@@ -174,7 +172,7 @@ export default function ScheduleList() {
                           );
 
                           return (
-                            <div key={`${c.id}-${type}`} className="rounded-md border border-border min-w-0">
+                            <div key={`${c.id}-${type}`} className="bg-slate-300 dark:bg-slate-700 rounded-md border border-border min-w-0">
                               <div className="px-3 py-2 text-sm font-semibold bg-muted/50">
                                 {type} Sections
                               </div>

@@ -22,6 +22,14 @@ export type WeekSchedulerProps = {
   onEventClick?: (ev: any) => void;
 };
 
+type Interval = {
+  key: string;
+  id: string;
+  day: DayIndex;
+  startMin: number;
+  endMin: number;
+};
+
 export const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 const PALETTE = [
@@ -169,12 +177,6 @@ function minsToPctRange(startMin: number, endMin: number, startHour: number, end
   return { topPct, heightPct };
 }
 
-function intersectRange(aStart: number, aEnd: number, bStart: number, bEnd: number) {
-  const s = Math.max(aStart, bStart);
-  const e = Math.min(aEnd, bEnd);
-  return e > s ? { start: s, end: e } : null;
-}
-
 type RenderEvent = {
   key: string;
   id: string;
@@ -241,29 +243,101 @@ export default function WeekScheduler({
       .filter((e) => e.heightPct > 0);
   }, [eventsExpanded, startHour, endHour, getColor]);
 
-  const conflicts = useMemo(() => {
-    const byDay: Record<number, Array<{ topPct: number; heightPct: number }>> = {};
-    for (let d = 0; d < daysToRender; d++) {
-      const dayEvents = (eventsExpanded || []).filter((e) => e.day === d);
-      const segs = computeConflictsForDay(dayEvents.map(({ start, end }) => ({ start, end })), startHour, endHour);
-      byDay[d] = segs.map(({ startMin, endMin }) => minsToPctRange(startMin, endMin, startHour, endHour));
-    }
-    return byDay;
-  }, [eventsExpanded, startHour, endHour, daysToRender]);
-
   const timeMarks = useMemo(() => {
     const marks: { label: string; minutes: number }[] = [];
     const step = slotMinutes;
     for (let t = startHour * 60; t <= endHour * 60; t += step) {
       const hh = Math.floor(t / 60);
       const mm = t % 60;
-      marks.push({ label: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`, minutes: t });
+      marks.push({
+        label: `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`,
+        minutes: t,
+      });
     }
     return marks;
   }, [startHour, endHour, slotMinutes]);
 
+  function toInterval(
+    e: RenderEvent,
+    startHour: number,
+    endHour: number
+  ): Interval | null {
+    const s = clampToGrid(parseTimeToMinutes(e.start), startHour, endHour);
+    const en = clampToGrid(parseTimeToMinutes(e.end), startHour, endHour);
+    if (en <= s) return null;
+    return { key: e.key, id: e.id, day: e.day, startMin: s, endMin: en };
+  }
+
+  function computeConflictingEventKeys(
+    events: RenderEvent[],
+    startHour: number,
+    endHour: number,
+    daysToRender: number
+  ): Set<string> {
+    const conflictKeys = new Set<string>();
+
+    for (let d = 0; d < daysToRender; d++) {
+      const intervals = events
+        .filter((e) => e.day === d)
+        .map((e) => toInterval(e, startHour, endHour))
+        .filter((x): x is Interval => x !== null)
+        .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+
+      const active: Interval[] = [];
+      let head = 0;
+
+      for (const curr of intervals) {
+        while (head < active.length && active[head].endMin <= curr.startMin) head++;
+
+        if (head < active.length) {
+          conflictKeys.add(curr.key);
+          for (let i = head; i < active.length; i++) {
+            conflictKeys.add(active[i].key);
+          }
+        }
+
+        active.push(curr);
+
+        let i = active.length - 1;
+        while (i - 1 >= head && active[i - 1].endMin > active[i].endMin) {
+          const tmp = active[i - 1];
+          active[i - 1] = active[i];
+          active[i] = tmp;
+          i--;
+        }
+      }
+    }
+
+    return conflictKeys;
+  }
+
+  const conflictKeys = useMemo(() => {
+    return computeConflictingEventKeys(eventsExpanded || [], startHour, endHour, daysToRender);
+  }, [eventsExpanded, startHour, endHour, daysToRender]);
+
+  const conflicts= useMemo(() => {
+    const set = new Set<string>();
+    const byKey = new Map(eventsExpanded.map(e => [e.key, e]));
+    for (const k of conflictKeys) {
+      const ev = byKey.get(k);
+      if (ev) set.add(ev.title);
+    }
+    return Array.from(set);
+  }, [conflictKeys, eventsExpanded]);
+
+  let conflictOutput = "Cannot show schedule due to conflicts in:\n";
+
   return (
     <div className="w-full h-[720px] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+      {conflicts.length > 0 && (
+          <div className="relative border-l">
+            <div className="flex items-center justify-center h-full p-3 text-center text-sm font-semibold text-red-600">
+              {conflictOutput += conflicts.map((title, i) => {
+                return " " + title;
+              })}
+            </div>
+          </div>
+        )}
       <div className="grid" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
         <div className="bg-zinc-100 dark:bg-zinc-700 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
         {Array.from({ length: daysToRender }).map((_, d) => (
@@ -276,7 +350,8 @@ export default function WeekScheduler({
         ))}
       </div>
 
-      <div className="grid h-[calc(100%-44px)] mt-3 mb-3" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
+
+      {conflicts.length == 0 && <div className="grid h-[calc(100%-44px)] mt-3 mb-3" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
         <div className="relative">
           <div className="absolute inset-0">
             {timeMarks.map((m, i) =>
@@ -293,7 +368,7 @@ export default function WeekScheduler({
           </div>
         </div>
 
-        {Array.from({ length: daysToRender }).map((_, d) => (
+        {conflicts.length == 0 && Array.from({ length: daysToRender }).map((_, d) => (
           <div key={d} className="relative border-l border-zinc-100 dark:border-zinc-800">
             <div className="absolute inset-0 p-1">
               {layout
@@ -311,14 +386,16 @@ export default function WeekScheduler({
                       style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
                       title={titleLabel}
                     >
-                      <div className="h-full w-full p-2 flex flex-col items-start justify-between overflow-hidden relative">
-                        <div className="absolute inset-0 overflow-y-auto scrollbar-hide p-2">
-                          <div className="text-[10px] font-medium opacity-90">{start12}–{end12}</div>
-                          <div className="w-full text-center text-[12px] font-semibold leading-tight whitespace-pre-wrap break-words">
+                      <div className="h-full w-full p-2 flex flex-col items-center justify-center overflow-hidden relative">
+                        <div className="overflow-y-auto scrollbar-hide p-2 text-center">
+                          <div className="absolute inset-0 text-[9px] p-1 text-left font-medium opacity-90">{start12}–{end12}</div>
+                          <div className="w-full text-center text-[10px] sm:text-[12px] font-semibold leading-tight whitespace-pre-wrap break-words">
                             {e.title}
                           </div>
                           {e.location && (
-                            <div className="text-[10px] opacity-90 whitespace-pre-wrap break-words">{e.location}</div>
+                            <div className="absolute bottom-0 left-0 p-1 text-[9px] opacity-90 whitespace-pre-wrap break-words">
+                              {e.location}
+                            </div>
                           )}
                         </div>
                       </div>
@@ -328,7 +405,7 @@ export default function WeekScheduler({
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }
