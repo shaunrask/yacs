@@ -59,7 +59,6 @@ export default function ScheduleList() {
         map.set(id, maxIndex);
       }
     }
-    // Optionally prune removed ids
     const currentIds = new Set(courses.map(c => c.id));
     for (const id of Array.from(map.keys())) {
       if (!currentIds.has(id)) map.delete(id);
@@ -79,13 +78,10 @@ export default function ScheduleList() {
   const toggleOpen = (id: string) =>
     setOpen((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  // Replace a course's meetings by removing and re-adding (id stays same).
-  // Visual order is preserved by the orderRef-based sort above.
   const replaceCourseMeetings = (course: Course, newMeetings: Meeting[]) => {
     removeCourse(course.id);
     const updated: Course = { ...course, meetings: newMeetings };
     addCourse(updated);
-    // No need to touch orderRef since id is unchanged.
   };
 
   const onPickSection = (course: Course, type: string, selected: Meeting) => {
@@ -156,7 +152,6 @@ export default function ScheduleList() {
                   </div>
                 </div>
 
-                {/* Expanded: section pickers grouped by type */}
                 {expanded && (
                   <div className="px-3 pb-3">
                     {Object.keys(allByType).length === 0 ? (
@@ -176,7 +171,7 @@ export default function ScheduleList() {
                               <div className="px-3 py-2 text-sm font-semibold bg-muted/50">
                                 {type} Sections
                               </div>
-                              <div className="p-2 space-y-1 min-w-0">
+                              <div className="p-1 space-y-1 min-w-0">
                                 {sortedOptions.map((opt) => (
                                   <SectionRow
                                     key={`${c.id}-${type}-${opt.section}`}

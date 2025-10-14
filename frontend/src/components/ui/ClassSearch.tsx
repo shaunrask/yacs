@@ -1,24 +1,43 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
+import { VList } from "virtua";
 import { Search as SearchIcon, X as XIcon, Check as CheckIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useSchedule } from "../../context/schedule-context";
 import type { Course, Meeting } from "../../types/schedule";
 
 function pickDefaultMeetings(c: Course): Meeting[] {
-  // Pick the first meeting for each meeting.type in the order they appear.
   const chosen = new Map<string, Meeting>();
-  for (const m of c.meetings) {
-    if (!chosen.has(m.type)) chosen.set(m.type, m);
-  }
+  for (const m of c.meetings) if (!chosen.has(m.type)) chosen.set(m.type, m);
   return Array.from(chosen.values());
 }
 
-export function ClassSearch({ dropdownContainerId = "class-search-results-slot" }: { dropdownContainerId?: string }) {
-  const { catalog, addCourse, hasCourse } = useSchedule(); // <- read from context
+function useDebounced<T>(value: T, delay = 150) {
+  const [v, setV] = React.useState(value);
+  React.useEffect(() => {
+    const t = setTimeout(() => setV(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return v;
+}
+
+export function ClassSearch({
+  dropdownContainerId = "class-search-results-slot",
+  maxResults = 100,
+  itemHeight = 40,
+  listMaxHeight = 320,
+}: {
+  dropdownContainerId?: string;
+  maxResults?: number;
+  itemHeight?: number;
+  listMaxHeight?: number;
+}) {
+  const { catalog, addCourse, hasCourse } = useSchedule();
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
+  const deferredQuery = React.useDeferredValue(query);
+  const debouncedQuery = useDebounced(deferredQuery, 120);
 
   const wrapperRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -35,21 +54,45 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
       if (
         (wrapperRef.current && wrapperRef.current.contains(t)) ||
         (dropdownRef.current && dropdownRef.current.contains(t))
-      ) return;
+      )
+        return;
       setOpen(false);
     };
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
-  const filtered = React.useMemo(() => {
+  type Indexed = { id: string; title: string; idL: string; titleL: string; raw: Course };
+  const indexedCatalog = React.useMemo<Indexed[]>(() => {
     const items = Array.isArray(catalog) ? catalog : [];
-    const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((c) =>
-      c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
-    );
-  }, [catalog, query]);
+    return items.map((c) => ({
+      id: c.id,
+      title: c.title,
+      idL: c.id.toLowerCase(),
+      titleL: c.title.toLowerCase(),
+      raw: c,
+    }));
+  }, [catalog]);
+
+  const [filtered, setFiltered] = React.useState<Indexed[]>(indexedCatalog.slice(0, maxResults));
+  React.useEffect(() => {
+    const q = debouncedQuery.trim().toLowerCase();
+    if (!q) {
+      setFiltered(indexedCatalog.slice(0, maxResults));
+      return;
+    }
+    React.startTransition(() => {
+      const out: Indexed[] = [];
+      for (let i = 0; i < indexedCatalog.length; i++) {
+        const item = indexedCatalog[i];
+        if (item.idL.includes(q) || item.titleL.includes(q)) {
+          out.push(item);
+          if (out.length >= maxResults) break;
+        }
+      }
+      setFiltered(out);
+    });
+  }, [debouncedQuery, indexedCatalog, maxResults]);
 
   const isOpen = open || query.length > 0;
 
@@ -63,37 +106,53 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
       {filtered.length === 0 ? (
         <div className="p-3 text-sm opacity-80">No classes found.</div>
       ) : (
-        <ul className="max-h-40 overflow-auto divide-y divide-border overscroll-contain">
-          {filtered.map((c) => {
-            const already = hasCourse(c.id);
-            return (
-              <li
-                key={c.id}
-                className={cn(
-                  "flex cursor-pointer items-center gap-2 px-3 h-10",
-                  already ? "opacity-60 cursor-not-allowed" : "hover:bg-muted"
-                )}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  if (already) return;
-                  // add course with ONLY the first section per meeting type
-                  const selectedMeetings = pickDefaultMeetings(c);
-                  const selectedCourse: Course = { ...c, meetings: selectedMeetings };
-                  addCourse(selectedCourse);
-                  setQuery("");
-                  setOpen(true);
-                  inputRef.current?.focus();
-                }}
-                role="option"
-                aria-selected={already}
-                aria-disabled={already}
-              >
-                <CheckIcon className={cn("h-4 w-4", already ? "opacity-100" : "opacity-0")} />
-                <span className="truncate">{c.id} - {c.title}</span>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="max-h-80">
+          <VList
+            style={{
+              height: Math.min(listMaxHeight, filtered.length * itemHeight),
+              overflow: "auto",
+              width: "100%",
+            }}
+            className="overscroll-contain"
+          >
+            {filtered.map((c) => {
+              const already = hasCourse(c.id);
+              return (
+                <li
+                  key={c.id}
+                  style={{ height: itemHeight }}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-2 px-3 border-b border-border",
+                    already ? "opacity-60 cursor-not-allowed" : "hover:bg-muted"
+                  )}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    if (already) return;
+                    const selectedMeetings = pickDefaultMeetings(c.raw);
+                    const selectedCourse: Course = { ...c.raw, meetings: selectedMeetings };
+                    addCourse(selectedCourse);
+                    setQuery("");
+                    setOpen(true);
+                    inputRef.current?.focus();
+                  }}
+                  role="option"
+                  aria-selected={already}
+                  aria-disabled={already}
+                >
+                  <CheckIcon className={cn("h-4 w-4", already ? "opacity-100" : "opacity-0")} />
+                  <span className="truncate">
+                    {c.id} - {c.title}
+                  </span>
+                </li>
+              );
+            })}
+          </VList>
+          {filtered.length === maxResults && (
+            <div className="px-3 py-1 text-xs opacity-70 border-t border-border">
+              Showing first {maxResults} results. Refine your search…
+            </div>
+          )}
+        </div>
       )}
     </div>
   ) : null;
@@ -148,7 +207,6 @@ export function ClassSearch({ dropdownContainerId = "class-search-results-slot" 
           </button>
         )}
       </div>
-
       {portalEl && dropdown ? createPortal(dropdown, portalEl) : null}
     </>
   );
