@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { VList } from "virtua";
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search as SearchIcon, X as XIcon, Check as CheckIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useSchedule } from "../../context/schedule-context";
@@ -74,27 +74,31 @@ export function ClassSearch({
     }));
   }, [catalog]);
 
-  const [filtered, setFiltered] = React.useState<Indexed[]>(indexedCatalog.slice(0, maxResults));
-  React.useEffect(() => {
+  const filtered = React.useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    if (!q) {
-      setFiltered(indexedCatalog.slice(0, maxResults));
-      return;
-    }
-    React.startTransition(() => {
-      const out: Indexed[] = [];
-      for (let i = 0; i < indexedCatalog.length; i++) {
-        const item = indexedCatalog[i];
-        if (item.idL.includes(q) || item.titleL.includes(q)) {
-          out.push(item);
-          if (out.length >= maxResults) break;
-        }
+    if (!q) return indexedCatalog.slice(0, maxResults);
+    
+    const out: Indexed[] = [];
+    for (let i = 0; i < indexedCatalog.length; i++) {
+      const item = indexedCatalog[i];
+      if (item.idL.includes(q) || item.titleL.includes(q)) {
+        out.push(item);
+        if (out.length >= maxResults) break;
       }
-      setFiltered(out);
-    });
+    }
+    return out;
   }, [debouncedQuery, indexedCatalog, maxResults]);
 
-  const isOpen = open || query.length > 0;
+  const parentRef = React.useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filtered.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => itemHeight,
+    overscan: 5
+  });
+
+  const isOpen = open;
 
   const dropdown = isOpen ? (
     <div
@@ -106,47 +110,71 @@ export function ClassSearch({
       {filtered.length === 0 ? (
         <div className="p-3 text-sm opacity-80">No classes found.</div>
       ) : (
-        <div className="max-h-80">
-          <VList
+        <div 
+          className="max-h-80"
+          style={{ contain: 'paint' }}
+        >
+          <div
+            ref={parentRef}
+            className="overscroll-contain"
             style={{
               height: Math.min(listMaxHeight, filtered.length * itemHeight),
-              overflow: "auto",
-              width: "100%",
+              overflow: 'auto',
+              willChange: 'transform',
+              transform: 'translateZ(0)',
+              width: '100%'
             }}
-            className="overscroll-contain"
           >
-            {filtered.map((c) => {
-              const already = hasCourse(c.id);
-              return (
-                <li
-                  key={c.id}
-                  style={{ height: itemHeight }}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-2 px-3 border-b border-border",
-                    already ? "opacity-60 cursor-not-allowed" : "hover:bg-muted"
-                  )}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => {
-                    if (already) return;
-                    const selectedMeetings = pickDefaultMeetings(c.raw);
-                    const selectedCourse: Course = { ...c.raw, meetings: selectedMeetings };
-                    addCourse(selectedCourse);
-                    setQuery("");
-                    setOpen(true);
-                    inputRef.current?.focus();
-                  }}
-                  role="option"
-                  aria-selected={already}
-                  aria-disabled={already}
-                >
-                  <CheckIcon className={cn("h-4 w-4", already ? "opacity-100" : "opacity-0")} />
-                  <span className="truncate">
-                    {c.id} - {c.title}
-                  </span>
-                </li>
-              );
-            })}
-          </VList>
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative'
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const c = filtered[virtualRow.index];
+                const already = hasCourse(c.id);
+                return (
+                  <div
+                    key={c.id}
+
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <li
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 px-3 border-b border-border h-[40px]",
+                        already ? "opacity-60 cursor-not-allowed" : "hover:bg-muted"
+                      )}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        if (already) return;
+                        const selectedMeetings = pickDefaultMeetings(c.raw);
+                        const selectedCourse: Course = { ...c.raw, meetings: selectedMeetings };
+                        addCourse(selectedCourse);
+                        setOpen(true);
+                        inputRef.current?.focus();
+                      }}
+                      role="option"
+                      aria-selected={already}
+                      aria-disabled={already}
+                    >
+                      <CheckIcon className={cn("h-4 w-4", already ? "opacity-100" : "opacity-0")} />
+                      <span className="truncate">
+                        {c.id} - {c.title}
+                      </span>
+                    </li>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
           {filtered.length === maxResults && (
             <div className="px-3 py-1 text-xs opacity-70 border-t border-border">
               Showing first {maxResults} results. Refine your search…

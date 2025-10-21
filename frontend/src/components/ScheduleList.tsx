@@ -1,37 +1,52 @@
 import * as React from "react";
+import type { JSX } from "react";
 import { useSchedule } from "../context/schedule-context";
 import type { Course, Meeting } from "../types/schedule";
 import { Button } from "./ui/button";
+import { hasScheduleConflict } from "../utils/schedule";
+import { cn } from "../lib/utils";
 
 function formatDays(ds: string[]) {
   return (ds || []).join("");
+}
+
+interface SectionRowProps {
+  meeting: Meeting;
+  checked: boolean;
+  onChange: () => void;
+  hasConflict: boolean;
+  disabled?: boolean;
 }
 
 function SectionRow({
   meeting,
   checked,
   onChange,
-}: {
-  meeting: Meeting;
-  checked: boolean;
-  onChange: () => void;
-}) {
+  hasConflict,
+  disabled,
+}: SectionRowProps): JSX.Element {
   return (
     <label className="flex items-center justify-center rounded w-full">
       <Button
         type="button"
         onClick={onChange}
-        className={[
-          "w-full text-left justify-start",   
-          "min-w-0",                          
-          "h-30",                            
+        disabled={disabled}
+        className={cn(
+          "w-full text-left justify-start min-w-0 h-30",
           checked ? "bg-background hover:bg-muted/20" : "hover:bg-muted",
-        ].join(" ")}
+          hasConflict && !checked && "bg-red-100 hover:bg-red-200 text-red-900 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
       >
         <div className="flex items-start gap-2 w-full min-w-0">
           <div className="text-sm w-full min-w-0">
             <div className="font-medium truncate">
               {meeting.type} {meeting.section}
+              {hasConflict && !checked && (
+                <span className="ml-2 text-xs text-red-600 dark:text-red-400">
+                  (Conflicts)
+                </span>
+              )}
             </div>
             <div className="text-xs opacity-60 whitespace-normal break-words leading-snug">
               {formatDays(meeting.days)} · {meeting.start}–{meeting.end}
@@ -45,7 +60,7 @@ function SectionRow({
   );
 }
 
-export default function ScheduleList() {
+export default function ScheduleList(): JSX.Element {
   const { courses, removeCourse, clear, catalog, addCourse } = useSchedule();
 
   const orderRef = React.useRef<Map<string, number>>(new Map());
@@ -102,7 +117,7 @@ export default function ScheduleList() {
   };
 
   return (
-    <section className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-5xl">
       <div className="mb-2 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Your Schedule</h2>
         {displayCourses.length > 0 && (
@@ -118,7 +133,7 @@ export default function ScheduleList() {
       {displayCourses.length === 0 ? (
         <p className="text-sm opacity-75">No classes selected yet.</p>
       ) : (
-        <ul className="divide-y divide-border rounded-md border border-border bg-surface">
+        <div className="divide-y divide-border rounded-md border border-border bg-surface">
           {displayCourses.map((c) => {
             const expanded = !!open[c.id];
             const allMeetings = getAllMeetingsForCourse(c.id);
@@ -126,8 +141,7 @@ export default function ScheduleList() {
             const currentByType = groupByType(c.meetings);
 
             return (
-              <li key={c.id}>
-                {/* Header row */}
+              <div key={c.id}>
                 <div
                   className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-muted/50"
                   onClick={() => toggleOpen(c.id)}
@@ -166,24 +180,35 @@ export default function ScheduleList() {
                             String(a.section).localeCompare(String(b.section), undefined, { numeric: true })
                           );
 
+                          // Get all currently selected meetings except for the current type
+                          const otherMeetings = c.meetings.filter(m => m.type !== type);
+                          const otherCourseMeetings = displayCourses
+                            .filter(course => course.id !== c.id)
+                            .flatMap(course => course.meetings);
+                          
                           return (
                             <div key={`${c.id}-${type}`} className="bg-slate-300 dark:bg-slate-700 rounded-md border border-border min-w-0">
                               <div className="px-3 py-2 text-sm font-semibold bg-muted/50">
                                 {type} Sections
                               </div>
                               <div className="p-1 space-y-1 min-w-0">
-                                {sortedOptions.map((opt) => (
-                                  <SectionRow
-                                    key={`${c.id}-${type}-${opt.section}`}
-                                    meeting={opt}
-                                    checked={
-                                      current
-                                        ? current.section === opt.section && current.type === opt.type
-                                        : false
-                                    }
-                                    onChange={() => onPickSection(c, type, opt)}
-                                  />
-                                ))}
+                                {sortedOptions.map((opt) => {
+                                  const allMeetingsToCheck = [...otherMeetings, ...otherCourseMeetings];
+                                  const conflictsWithOthers = hasScheduleConflict(allMeetingsToCheck, opt);
+                                  const isSelected = current
+                                    ? current.section === opt.section && current.type === opt.type
+                                    : false;
+                                  
+                                  return (
+                                    <SectionRow
+                                      key={`${c.id}-${type}-${opt.section}`}
+                                      meeting={opt}
+                                      checked={isSelected}
+                                      hasConflict={conflictsWithOthers}
+                                      onChange={() => onPickSection(c, type, opt)}
+                                    />
+                                  );
+                                })}
                               </div>
                             </div>
                           );
@@ -192,11 +217,11 @@ export default function ScheduleList() {
                     )}
                   </div>
                 )}
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
-    </section>
+    </div>
   );
 }
