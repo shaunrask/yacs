@@ -1,14 +1,14 @@
-from sqlalchemy import Column, Integer, String, PrimaryKeyConstraint
+from sqlalchemy import Column, PrimaryKeyConstraint
+from sqlalchemy.dialects.postgresql import INTEGER, VARCHAR
 
 from .database import Base
-
 
 class CoursePrerequisite(Base):
     __tablename__ = "course_prerequisite"
 
-    department = Column(String(length=255))
-    level = Column(Integer)
-    prerequisite = Column(String(length=255))
+    department = Column(VARCHAR(length=255))
+    level = Column(INTEGER)
+    prerequisite = Column(VARCHAR(length=255))
 
     __table_args__ = (
         PrimaryKeyConstraint('department', 'level', 'prerequisite'),
