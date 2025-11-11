@@ -2,9 +2,9 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search as SearchIcon, X as XIcon, Check as CheckIcon } from "lucide-react";
-import { cn } from "../../lib/utils";
-import { useSchedule } from "../../context/schedule-context";
-import type { Course, Meeting } from "../../types/schedule";
+import { cn } from "../lib/utils";
+import { useSchedule } from "../context/schedule-context";
+import type { Course, Meeting } from "../types/schedule";
 
 function pickDefaultMeetings(c: Course): Meeting[] {
   const chosen = new Map<string, Meeting>();
@@ -104,6 +104,7 @@ export function ClassSearch({
     <div
       ref={dropdownRef}
       className={cn("w-full overflow-hidden bg-header text-input-foreground")}
+      id="class-search-dropdown-listbox"
       role="listbox"
       aria-label="Search results"
     >
@@ -213,10 +214,11 @@ export function ClassSearch({
               (e.target as HTMLInputElement).blur();
             }
           }}
-          placeholder="Search classes"
           className="flex-1 bg-transparent text-foreground placeholder:opacity-60 outline-none"
           aria-expanded={isOpen}
           aria-haspopup="listbox"
+          aria-controls="class-search-dropdown-listbox"
+          placeholder="Search classes..."
           role="combobox"
         />
         {query && (

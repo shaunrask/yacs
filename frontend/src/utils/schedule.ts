@@ -9,11 +9,9 @@ function parseTime(timeStr: string): number {
 }
 
 export function doMeetingsConflict(meeting1: Meeting, meeting2: Meeting): boolean {
-  // Different days can't conflict
   const commonDays = meeting1.days.filter(day => meeting2.days.includes(day));
   if (commonDays.length === 0) return false;
 
-  // Convert times to minutes since midnight for easier comparison
   const start1 = parseTime(meeting1.start);
   const end1 = parseTime(meeting1.end);
   const start2 = parseTime(meeting2.start);

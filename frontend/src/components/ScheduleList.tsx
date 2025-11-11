@@ -33,7 +33,8 @@ function SectionRow({
         disabled={disabled}
         className={cn(
           "w-full text-left justify-start min-w-0 h-30",
-          checked ? "bg-background hover:bg-muted/20" : "hover:bg-muted",
+          checked && !hasConflict ? "bg-background hover:bg-muted/20" : "hover:bg-muted",
+          hasConflict && checked && "bg-red-300 hover:bg-red-400 text-red-900 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400",
           hasConflict && !checked && "bg-red-100 hover:bg-red-200 text-red-900 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400",
           disabled && "opacity-50 cursor-not-allowed"
         )}
@@ -42,7 +43,7 @@ function SectionRow({
           <div className="text-sm w-full min-w-0">
             <div className="font-medium truncate">
               {meeting.type} {meeting.section}
-              {hasConflict && !checked && (
+              {hasConflict && (
                 <span className="ml-2 text-xs text-red-600 dark:text-red-400">
                   (Conflicts)
                 </span>
@@ -148,6 +149,20 @@ export default function ScheduleList(): JSX.Element {
                 >
                   <span className="font-medium truncate">
                     {c.id} — {c.title}
+                    {(() => {
+                      const otherCourseMeetings = displayCourses
+                        .filter(course => course.id !== c.id)
+                        .flatMap(course => course.meetings);
+                      const allConflict =
+                        otherCourseMeetings.length > 0 &&
+                        allMeetings.length > 0 &&
+                        allMeetings.every((m) => hasScheduleConflict(otherCourseMeetings, m));
+                      return allConflict ? (
+                        <span className="ml-2 text-xs text-red-600 dark:text-red-400">
+                          All sections conflict
+                        </span>
+                      ) : null;
+                    })()}
                   </span>
                   <div className="flex items-center gap-3">
                     <span className="text-xs opacity-70">

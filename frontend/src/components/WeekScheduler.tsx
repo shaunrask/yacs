@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useEffect } from "react";
-import { useSchedule } from "../../context/schedule-context";
-import { Course } from "../../types/schedule";
+import { useSchedule } from "../context/schedule-context";
+import { Course } from "../types/schedule";
 
 export type DayIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0=Mon, 6=Sun
 
@@ -129,54 +129,6 @@ function clampToGrid(mins: number, startHour: number, endHour: number) {
   return clamp(mins, startHour * 60, endHour * 60);
 }
 
-function computeConflictsForDay(
-  dayEvents: Array<{ start: string; end: string }>,
-  startHour: number,
-  endHour: number
-): Array<{ startMin: number; endMin: number }> {
-  const gridStart = startHour * 60;
-  const gridEnd = endHour * 60;
-
-  const points: Array<{ t: number; d: number }> = [];
-  for (const ev of dayEvents) {
-    const s = clampToGrid(parseTimeToMinutes(ev.start), startHour, endHour);
-    const e = clampToGrid(parseTimeToMinutes(ev.end), startHour, endHour);
-    if (e <= s) continue;
-    points.push({ t: s, d: +1 });
-    points.push({ t: e, d: -1 });
-  }
-  if (points.length === 0) return [];
-
-  points.sort((a, b) => (a.t === b.t ? a.d - b.d : a.t - b.t));
-
-  const segments: Array<{ startMin: number; endMin: number }> = [];
-  let count = 0;
-  let segStart: number | null = null;
-
-  for (const p of points) {
-    const prev = count;
-    count += p.d;
-    if (prev < 2 && count >= 2) segStart = clamp(p.t, gridStart, gridEnd);
-    if (prev >= 2 && count < 2 && segStart !== null) {
-      const segEnd = clamp(p.t, gridStart, gridEnd);
-      if (segEnd > segStart) segments.push({ startMin: segStart, endMin: segEnd });
-      segStart = null;
-    }
-  }
-  if (segStart !== null) segments.push({ startMin: segStart, endMin: gridEnd });
-  return segments;
-}
-
-function minsToPctRange(startMin: number, endMin: number, startHour: number, endHour: number) {
-  const totalMinutes = (endHour - startHour) * 60;
-  const gridStart = startHour * 60;
-  const clampedStart = clamp(startMin, gridStart, gridStart + totalMinutes);
-  const clampedEnd = clamp(endMin, gridStart, gridStart + totalMinutes);
-  const topPct = ((clampedStart - gridStart) / totalMinutes) * 100;
-  const heightPct = Math.max(0, ((clampedEnd - clampedStart) / totalMinutes) * 100);
-  return { topPct, heightPct };
-}
-
 type RenderEvent = {
   key: string;
   id: string;
@@ -210,6 +162,60 @@ function expandCoursesToRenderEvents(courses: Course[]): RenderEvent[] {
     }
   }
   return out;
+}
+
+function toInterval(
+    e: RenderEvent,
+    startHour: number,
+    endHour: number
+  ): Interval | null {
+    const s = clampToGrid(parseTimeToMinutes(e.start), startHour, endHour);
+    const en = clampToGrid(parseTimeToMinutes(e.end), startHour, endHour);
+    if (en <= s) return null;
+    return { key: e.key, id: e.id, day: e.day, startMin: s, endMin: en };
+  }
+
+function computeConflictingEventKeys(
+  events: RenderEvent[],
+  startHour: number,
+  endHour: number,
+  daysToRender: number
+): Set<string> {
+  const conflictKeys = new Set<string>();
+
+  for (let d = 0; d < daysToRender; d++) {
+    const intervals = events
+      .filter((e) => e.day === d)
+      .map((e) => toInterval(e, startHour, endHour))
+      .filter((x): x is Interval => x !== null)
+      .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+
+    const active: Interval[] = [];
+    let head = 0;
+
+    for (const curr of intervals) {
+      while (head < active.length && active[head].endMin <= curr.startMin) head++;
+
+      if (head < active.length) {
+        conflictKeys.add(curr.key);
+        for (let i = head; i < active.length; i++) {
+          conflictKeys.add(active[i].key);
+        }
+      }
+
+      active.push(curr);
+
+      let i = active.length - 1;
+      while (i - 1 >= head && active[i - 1].endMin > active[i].endMin) {
+        const tmp = active[i - 1];
+        active[i - 1] = active[i];
+        active[i] = tmp;
+        i--;
+      }
+    }
+  }
+
+  return conflictKeys;
 }
 
 export default function WeekScheduler({
@@ -257,60 +263,6 @@ export default function WeekScheduler({
     return marks;
   }, [startHour, endHour, slotMinutes]);
 
-  function toInterval(
-    e: RenderEvent,
-    startHour: number,
-    endHour: number
-  ): Interval | null {
-    const s = clampToGrid(parseTimeToMinutes(e.start), startHour, endHour);
-    const en = clampToGrid(parseTimeToMinutes(e.end), startHour, endHour);
-    if (en <= s) return null;
-    return { key: e.key, id: e.id, day: e.day, startMin: s, endMin: en };
-  }
-
-  function computeConflictingEventKeys(
-    events: RenderEvent[],
-    startHour: number,
-    endHour: number,
-    daysToRender: number
-  ): Set<string> {
-    const conflictKeys = new Set<string>();
-
-    for (let d = 0; d < daysToRender; d++) {
-      const intervals = events
-        .filter((e) => e.day === d)
-        .map((e) => toInterval(e, startHour, endHour))
-        .filter((x): x is Interval => x !== null)
-        .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
-
-      const active: Interval[] = [];
-      let head = 0;
-
-      for (const curr of intervals) {
-        while (head < active.length && active[head].endMin <= curr.startMin) head++;
-
-        if (head < active.length) {
-          conflictKeys.add(curr.key);
-          for (let i = head; i < active.length; i++) {
-            conflictKeys.add(active[i].key);
-          }
-        }
-
-        active.push(curr);
-
-        let i = active.length - 1;
-        while (i - 1 >= head && active[i - 1].endMin > active[i].endMin) {
-          const tmp = active[i - 1];
-          active[i - 1] = active[i];
-          active[i] = tmp;
-          i--;
-        }
-      }
-    }
-
-    return conflictKeys;
-  }
-
   const conflictKeys = useMemo(() => {
     return computeConflictingEventKeys(eventsExpanded || [], startHour, endHour, daysToRender);
   }, [eventsExpanded, startHour, endHour, daysToRender]);
@@ -351,7 +303,7 @@ export default function WeekScheduler({
       </div>
 
 
-      {conflicts.length == 0 && <div className="grid h-[calc(100%-44px)] mt-3 mb-3" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
+      {conflicts.length === 0 && <div className="grid h-[calc(100%-44px)] mt-3 mb-3" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
         <div className="relative">
           <div className="absolute inset-0">
             {timeMarks.map((m, i) =>
@@ -368,7 +320,7 @@ export default function WeekScheduler({
           </div>
         </div>
 
-        {conflicts.length == 0 && Array.from({ length: daysToRender }).map((_, d) => (
+        {conflicts.length === 0 && Array.from({ length: daysToRender }).map((_, d) => (
           <div key={d} className="relative border-l border-zinc-100 dark:border-zinc-800">
             <div className="absolute inset-0 p-1">
               {layout
