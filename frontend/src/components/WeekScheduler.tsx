@@ -165,15 +165,15 @@ function expandCoursesToRenderEvents(courses: Course[]): RenderEvent[] {
 }
 
 function toInterval(
-    e: RenderEvent,
-    startHour: number,
-    endHour: number
-  ): Interval | null {
-    const s = clampToGrid(parseTimeToMinutes(e.start), startHour, endHour);
-    const en = clampToGrid(parseTimeToMinutes(e.end), startHour, endHour);
-    if (en <= s) return null;
-    return { key: e.key, id: e.id, day: e.day, startMin: s, endMin: en };
-  }
+  e: RenderEvent,
+  startHour: number,
+  endHour: number
+): Interval | null {
+  const s = clampToGrid(parseTimeToMinutes(e.start), startHour, endHour);
+  const en = clampToGrid(parseTimeToMinutes(e.end), startHour, endHour);
+  if (en <= s) return null;
+  return { key: e.key, id: e.id, day: e.day, startMin: s, endMin: en };
+}
 
 function computeConflictingEventKeys(
   events: RenderEvent[],
@@ -267,9 +267,9 @@ export default function WeekScheduler({
     return computeConflictingEventKeys(eventsExpanded || [], startHour, endHour, daysToRender);
   }, [eventsExpanded, startHour, endHour, daysToRender]);
 
-  const conflicts= useMemo(() => {
+  const conflicts = useMemo(() => {
     const set = new Set<string>();
-    const byKey = new Map(eventsExpanded.map(e => [e.key, e]));
+    const byKey = new Map(eventsExpanded.map((e) => [e.key, e]));
     for (const k of conflictKeys) {
       const ev = byKey.get(k);
       if (ev) set.add(ev.title);
@@ -277,87 +277,115 @@ export default function WeekScheduler({
     return Array.from(set);
   }, [conflictKeys, eventsExpanded]);
 
-  let conflictOutput = "Cannot show schedule due to conflicts in:\n";
-
   return (
-    <div className="w-full h-[720px] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm">
+    <div className="w-full h-[720px] rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-lg bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-zinc-950">
       {conflicts.length > 0 && (
-          <div className="relative border-l">
-            <div className="flex items-center justify-center h-full p-3 text-center text-sm font-semibold text-red-600">
-              {conflictOutput += conflicts.map((title, i) => {
-                return " " + title;
-              })}
-            </div>
+        <div className="p-4 bg-rose-50 border-l-4 border-rose-500 text-rose-700 font-medium space-y-2">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856a2 2 0 001.789-2.894l-6.928-12a2 2 0 00-3.578 0l-6.928 12A2 2 0 005.062 19z" />
+            </svg>
+            <span>Schedule conflicts detected</span>
           </div>
-        )}
+          <ul className="list-disc list-inside text-sm">
+            {conflicts.map((title, i) => (
+              <li key={i}>{title}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Header row */}
       <div className="grid" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
         <div className="bg-zinc-100 dark:bg-zinc-700 p-3 border-b border-zinc-200 dark:border-zinc-800" aria-hidden="true" />
-        {Array.from({ length: daysToRender }).map((_, d) => (
-          <div
-            key={d}
-            className="bg-zinc-100 dark:bg-zinc-700 p-3 text-sm font-semibold text-zinc-700 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 text-center"
-          >
-            {dayNames[d]}
-          </div>
-        ))}
+        {Array.from({ length: daysToRender }).map((_, d) => {
+          const isWeekend = d >= 5;
+          return (
+            <div
+              key={d}
+              className={`p-3 text-sm font-semibold text-center border-b border-zinc-200 dark:border-zinc-800
+                ${isWeekend ? "bg-rose-50/60 dark:bg-rose-900/10" : "bg-zinc-100 dark:bg-zinc-800"}
+                text-zinc-700 dark:text-zinc-100 tracking-wide shadow-sm`}
+            >
+              {dayNames[d]}
+            </div>
+          );
+        })}
       </div>
 
-
-      {conflicts.length === 0 && <div className="grid h-[calc(100%-44px)] mt-3 mb-3" style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}>
-        <div className="relative">
-          <div className="absolute inset-0">
-            {timeMarks.map((m, i) =>
-              m.minutes % 60 === 0 ? (
-                <div
-                  key={i}
-                  className="absolute left-0 right-0 flex items-center justify-end pr-2 text-xs text-zinc-500"
-                  style={{ top: `${((m.minutes - startHour * 60) / totalMinutes) * 100}%` }}
-                >
-                  <span className="translate-y-[-50%] select-none">{formatTime12h(m.minutes)}</span>
-                </div>
-              ) : null
-            )}
+      {conflicts.length === 0 && (
+        <div
+          className="grid h-[calc(100%-44px)] mt-3 mb-3"
+          style={{ gridTemplateColumns: `80px repeat(${daysToRender}, 1fr)` }}
+        >
+          {/* Time column */}
+          <div className="relative">
+            <div className="absolute inset-0">
+              {timeMarks.map((m, i) =>
+                m.minutes % 60 === 0 ? (
+                  <div
+                    key={i}
+                    className="absolute left-0 right-0 flex items-center justify-end pr-2 text-xs text-zinc-500"
+                    style={{ top: `${((m.minutes - startHour * 60) / totalMinutes) * 100}%` }}
+                  >
+                    <span className="translate-y-[-50%] select-none">{formatTime12h(m.minutes)}</span>
+                  </div>
+                ) : null
+              )}
+            </div>
           </div>
-        </div>
 
-        {conflicts.length === 0 && Array.from({ length: daysToRender }).map((_, d) => (
-          <div key={d} className="relative border-l border-zinc-100 dark:border-zinc-800">
-            <div className="absolute inset-0 p-1">
-              {layout
-                .filter((e) => e.day === d)
-                .map((e) => {
-                  const start12 = formatClock12h(e.start);
-                  const end12 = formatClock12h(e.end);
-                  const titleLabel = `${e.title} • ${start12}–${end12}${e.location ? ` @ ${e.location}` : ""}`;
+          {/* Day columns */}
+          {Array.from({ length: daysToRender }).map((_, d) => (
+            <div key={d} className="relative border-l border-zinc-100 dark:border-zinc-800">
+              {/* faint horizontal lines */}
+              <div className="absolute inset-0 pointer-events-none">
+                {timeMarks.map((m, i) => (
+                  <div
+                    key={i}
+                    className="absolute left-0 right-0 border-t border-zinc-200/60 dark:border-zinc-800/60"
+                    style={{ top: `${((m.minutes - startHour * 60) / totalMinutes) * 100}%` }}
+                  />
+                ))}
+              </div>
 
-                  return (
-                    <button
-                      key={e.key}
-                      onClick={() => onEventClick?.(e)}
-                      className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass} text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition`}
-                      style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
-                      title={titleLabel}
-                    >
-                      <div className="h-full w-full p-2 flex flex-col items-center justify-center overflow-hidden relative">
-                        <div className="overflow-y-auto scrollbar-hide p-2 text-center">
-                          <div className="absolute inset-0 text-[9px] p-1 text-left font-medium opacity-90">{start12}–{end12}</div>
+              <div className="absolute inset-0 p-1">
+                {layout
+                  .filter((e) => e.day === d)
+                  .map((e) => {
+                    const start12 = formatClock12h(e.start);
+                    const end12 = formatClock12h(e.end);
+                    const titleLabel = `${e.title} • ${start12}–${end12}${e.location ? ` @ ${e.location}` : ""}`;
+
+                    return (
+                      <button
+                        key={e.key}
+                        onClick={() => onEventClick?.(e)}
+                        className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass} bg-opacity-30 text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition border border-gray-300 dark:border-gray-700 backdrop-blur-sm`}
+                        style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
+                        title={titleLabel}
+                      >
+                        <div className="h-full w-full p-2 flex flex-col items-center justify-center overflow-hidden relative text-input-foreground">
                           <div className="w-full text-center text-[10px] sm:text-[12px] font-semibold leading-tight whitespace-pre-wrap break-words">
                             {e.title}
                           </div>
+                          <div className="text-[9px] opacity-90 mt-1">
+                            {start12}–{end12}
+                          </div>
                           {e.location && (
-                            <div className="absolute bottom-0 left-0 p-1 text-[9px] opacity-90 whitespace-pre-wrap break-words">
+                            <div className="text-[9px] opacity-80 mt-1 whitespace-pre-wrap break-words">
                               {e.location}
                             </div>
                           )}
                         </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>}
+          ))}
+        </div>
+      )}
     </div>
   );
 }
