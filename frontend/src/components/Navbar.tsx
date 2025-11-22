@@ -19,6 +19,8 @@ function Navbar() {
       <NavLink to="/planner" className={link}>4-Year Plan</NavLink>
       <Separator orientation="vertical" />
       <NavLink to="/" className={link} end>Schedule</NavLink>
+      <Separator orientation="vertical" />
+      <NavLink to="/profile" className={link}>Profile</NavLink>
       <ThemeToggle />
     </div>
     <Bars3Icon className="absolute top-[24px] left-[90%] h-6 w-6 sm:hidden"/>
