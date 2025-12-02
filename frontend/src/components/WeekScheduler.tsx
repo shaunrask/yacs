@@ -33,16 +33,16 @@ type Interval = {
 export const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 
 const PALETTE = [
-  "bg-blue-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-violet-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-fuchsia-500",
-  "bg-lime-500",
-  "bg-orange-500",
-  "bg-sky-500",
+  "bg-blue-500 border-blue-600",
+  "bg-emerald-500 border-emerald-600",
+  "bg-amber-500 border-amber-600",
+  "bg-violet-500 border-violet-600",
+  "bg-rose-500 border-rose-600",
+  "bg-cyan-500 border-cyan-600",
+  "bg-fuchsia-500 border-fuchsia-600",
+  "bg-lime-500 border-lime-600",
+  "bg-orange-500 border-orange-600",
+  "bg-sky-500 border-sky-600",
 ] as const;
 
 function useCourseColors(courseIds: string[]) {
@@ -361,7 +361,7 @@ export default function WeekScheduler({
                       <button
                         key={e.key}
                         onClick={() => onEventClick?.(e)}
-                        className={`group absolute w-[96%] left-[2%] rounded-xl ${e.colorClass} bg-opacity-30 text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition border border-gray-300 dark:border-gray-700 backdrop-blur-sm`}
+                        className={`group absolute w-[96%] left-[2%] rounded-xl border ${e.colorClass} bg-opacity-25 border-opacity-50 text-white shadow-sm hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400/60 transition backdrop-blur-sm`}
                         style={{ top: `${e.topPct}%`, height: `${e.heightPct}%` }}
                         title={titleLabel}
                       >
