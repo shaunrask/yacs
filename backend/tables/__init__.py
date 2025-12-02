@@ -1,6 +1,6 @@
 # from .admin_settings import AdminSettings
 # from .course_corequisite import CourseCorequisite
-# from .course_prerequisite import CoursePrerequisite
+from .course_prerequisite import CoursePrerequisite
 # from .course_session import CourseSession
 # from .course import Course
 # from .event import Event
@@ -11,6 +11,8 @@
 # from .user_event import UserEvent
 # from .user_session import UserSession
 # from .professor import Professor
+# from .course_corequisite import CourseCorequisite
+
 
 from .database import Base
 from .database_session import SessionLocal
